@@ -14,8 +14,6 @@ sim9 <- function (speciesData,algo,metric, nReps = 1000 ,rowNames = TRUE, saveSe
     randomSeed <- NULL
   }
 
-  
-  
   ### Strip out row names
   
   if(rowNames){
@@ -28,7 +26,8 @@ sim9 <- function (speciesData,algo,metric, nReps = 1000 ,rowNames = TRUE, saveSe
   metricF <- get(metric)
   
   Obs <- metricF(speciesData)
-  msim <- speciesData
+  #Trim the matrix to be just rowssums > 0 
+  msim <- speciesData[rowSums(speciesData) > 0, ]
   ifelse(burn_in == 0, burn_in <- max(1000,10*nrow(msim)),burn_in <- burn_in)
   burn.in.metric <- vector(mode="numeric",length = burn_in)
   simulated.metric <- vector(mode="numeric",length = nReps)
@@ -39,7 +38,7 @@ sim9 <- function (speciesData,algo,metric, nReps = 1000 ,rowNames = TRUE, saveSe
   for (i in 1:burn_in)
   {
     msim <-sim9_single(msim)
-    F[i] <- metricF(msim)
+    burn.in.metric[i] <- metricF(msim)
     setTxtProgressBar(bi_pb, i)
   }
   close(bi_pb)
@@ -60,7 +59,7 @@ sim9 <- function (speciesData,algo,metric, nReps = 1000 ,rowNames = TRUE, saveSe
   Elapsed.Time <- format(End.Time-Start.Time,digits=2)
   Time.Stamp <- date()
 
-  sim9.fast.out <- list(Obs=Obs,Sim=Sim, Elapsed.Time=Elapsed.Time, Time.Stamp=Time.Stamp,Metric = metric, Algorithm = algo, N.Reps = nReps, SaveSeed = saveSeed, RandomSeed = randomSeed, Data = speciesData,burn.in = burn_in,burn.in.metric= burn.in.metric)
+  sim9.fast.out <- list(Obs=Obs,Sim=Sim, Elapsed.Time=Elapsed.Time, Time.Stamp=Time.Stamp,Metric = metric, Algorithm = algo, N.Reps = nReps, SaveSeed = saveSeed, RandomSeed = randomSeed,Randomized.Data = msim , Data = speciesData,burn.in = burn_in,burn.in.metric= burn.in.metric)
   # plot to screen the trace function for the burn in
   
   class(sim9.fast.out) <- "nullmod"
@@ -72,12 +71,8 @@ sim9 <- function (speciesData,algo,metric, nReps = 1000 ,rowNames = TRUE, saveSe
 #' sim9_single function
 #' @description Function for a single iteration of the fast swap
 #' @export
-sim9_single <- function (m = matrix(rbinom(100, 1, 0.5), nrow = 10), trim = FALSE) 
+sim9_single <- function (m = matrix(rbinom(100, 1, 0.5), nrow = 10)) 
 {
-  if(trim){
-    m <- m[rowSums(m) > 0, ] # make calculation on submatrix with no missing species
-  }
-  
   # select two random rows and create submatrix
   ran.rows <- sample.int(nrow(m), 2)
   m.pair <- m[ran.rows, ]
